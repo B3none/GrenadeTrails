@@ -1,9 +1,3 @@
-/*
-*   THIS IS NOT MY CODE I HAVE UPDATED IT TO THE LATEST SYNTAX
-*   ORIGINAL AUTHOR: https://forums.alliedmods.net/member.php?u=248386
-*   ORIGINAL PLUGIN: https://forums.alliedmods.net/showthread.php?t=240668
-*/
-
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
@@ -15,105 +9,109 @@ Handle g_Enabled = INVALID_HANDLE;
 Handle g_AllowPlayers = INVALID_HANDLE;
 Handle g_DefaultAlpha = INVALID_HANDLE;
 Handle g_DefaultOn = INVALID_HANDLE;
-Handle g_EnableHETails = INVALID_HANDLE;
-Handle g_EnableFlashTails = INVALID_HANDLE;
-Handle g_EnableSmokeTails = INVALID_HANDLE;
-Handle g_EnableDecoyTails = INVALID_HANDLE;
-Handle g_EnableMolotovTails = INVALID_HANDLE;
-Handle g_EnableIncTails = INVALID_HANDLE;
+Handle g_EnableHETrails = INVALID_HANDLE;
+Handle g_EnableFlashTrails = INVALID_HANDLE;
+Handle g_EnableSmokeTrails = INVALID_HANDLE;
+Handle g_EnableDecoyTrails = INVALID_HANDLE;
+Handle g_EnableMolotovTrails = INVALID_HANDLE;
+Handle g_EnableIncTrails = INVALID_HANDLE;
 Handle g_HEColor = INVALID_HANDLE;
 Handle g_FlashColor = INVALID_HANDLE;
 Handle g_SmokeColor = INVALID_HANDLE;
 Handle g_DecoyColor = INVALID_HANDLE;
 Handle g_MolotovColor = INVALID_HANDLE;
 Handle g_IncColor = INVALID_HANDLE;
-Handle g_TailTime = INVALID_HANDLE;
-Handle g_TailFadeTime = INVALID_HANDLE;
-Handle g_TailWidth = INVALID_HANDLE;
+Handle g_TrailTime = INVALID_HANDLE;
+Handle g_TrailFadeTime = INVALID_HANDLE;
+Handle g_TrailWidth = INVALID_HANDLE;
 
-any g_iBeamSprite;
-bool Tails[MAXPLAYERS+1];
+int g_iBeamSprite;
+bool Trails[MAXPLAYERS+1];
 
-TempColorArray[] = {0, 0, 0, 0}; //temp array since you can't return arrays
+// Temp array since you can't return arrays
+TempColorArray[] = {0, 0, 0, 0};
 
-//Ugly list of colors since I couldn't get Enum Arrays to work
-g_ColorAqua[] 	= {0,255,255};
-g_ColorBlack[]	= {0,0,0};
-g_ColorBlue[] 	= {0,0,255};
-g_ColorFuschia[] 	= {255,0,255};
-g_ColorGray[] 	= {128,128,128};
-g_ColorGreen[] 	= {0,128,0};
-g_ColorLime[] 	= {0,255,0};
-g_ColorMaroon[] 	= {128,0,0};
-g_ColorNavy[] 	= {0,0,128};
-g_ColorRed[] 		= {255,0,0};
-g_ColorWhite[] 	= {255,255,255};
-g_ColorYellow[]	= {255,255,0};
+// List of colors since I couldn't get Enum Arrays to work
+g_ColorAqua[] = {0,255,255};
+g_ColorBlack[] = {0,0,0};
+g_ColorBlue[] = {0,0,255};
+g_ColorFuschia[] = {255,0,255};
+g_ColorGray[] = {128,128,128};
+g_ColorGreen[] = {0,128,0};
+g_ColorLime[] = {0,255,0};
+g_ColorMaroon[] = {128,0,0};
+g_ColorNavy[] = {0,0,128};
+g_ColorRed[] = {255,0,0};
+g_ColorWhite[] = {255,255,255};
+g_ColorYellow[] = {255,255,0};
 g_ColorSilver[]	= {192,192,192};
-g_ColorTeal[]		= {0,128,128};
-g_ColorPurple[]	= {128,0,128};
-g_ColorOlive[]	= {128,128,0};
-//end colors
+g_ColorTeal[] = {0,128,128};
+g_ColorPurple[] = {128,0,128};
+g_ColorOlive[] = {128,128,0};
 
 public Plugin myinfo =
 {
-	name = "Nade Tails",
-	author = "InternetBully, edits by B3none",
-	version = "2.0",
-	description = "Adds tails to projectiles // Updated to new syntax by B3none",
-	url = ""
+	name = "Grenade Trails",
+	author = "B3none",
+	version = "1.0.0",
+	description = "Add grenade trails",
+	url = "https://github.com/b3none"
 };
 
 public void OnPluginStart()
 {
-	RegConsoleCmd("sm_tails", Cmd_Tails, "Toggles grenade tails.");
+	RegConsoleCmd("sm_grenade_trails", Cmd_Trails, "Toggles grenade trails.");
 	
-	//CVARs
-	g_Enabled 				= CreateConVar("sm_tails_enabled", "1", "Enables Nade Tails (0/1).", _, true, 0.0, true, 1.0);
-	g_AllowPlayers 		= CreateConVar("sm_tails_allowplayers", "1", "Allow players to use nade tails with !tails (0/1)", _, true, 0.0, true, 1.0);
-	g_DefaultAlpha		= CreateConVar("sm_tails_defaultalpha", "255", "Default alpha for trails (0 is invisible, 255 is solid).", _, true, 0.0, true, 255.0);
-	g_DefaultOn			= CreateConVar("sm_tails_defaulton", "1", "Tails on for all users, Set to 0 to require user to type !tails to use", _, true, 0.0, true, 1.0);
+	// CVARs
+	g_Enabled = CreateConVar("sm_grenade_trails_enabled", "1", "Enables Grenade Trails (0/1).", _, true, 0.0, true, 1.0);
+	g_AllowPlayers = CreateConVar("sm_grenade_trails_allowplayers", "1", "Allow players to use nade Trails with !trails (0/1)", _, true, 0.0, true, 1.0);
+	g_DefaultAlpha = CreateConVar("sm_grenade_trails_defaultalpha", "255", "Default alpha for trails (0 is invisible, 255 is solid).", _, true, 0.0, true, 255.0);
+	g_DefaultOn = CreateConVar("sm_grenade_trails_default_on", "1", "Trails on for all users, Set to 0 to require user to type !trails to use", _, true, 0.0, true, 1.0);
 	
-	//Projectiles to put tails on
-	g_EnableHETails		= CreateConVar("sm_tails_hegrenade", "1", "Enables Nade Tails on HE Grenades (0/1).", _, true, 0.0, true, 1.0);
-	g_EnableFlashTails	= CreateConVar("sm_tails_flashbang", "1", "Enables Nade Tails on Flashbangs (0/1).", _, true, 0.0, true, 1.0);
-	g_EnableSmokeTails	= CreateConVar("sm_tails_smoke", "1", "Enables Nade Tails on Smoke Grenades (0/1).", _, true, 0.0, true, 1.0);
-	g_EnableDecoyTails	= CreateConVar("sm_tails_decoy", "1", "Enables Nade Tails on Decoy Grenades (0/1).", _, true, 0.0, true, 1.0);
-	g_EnableMolotovTails	= CreateConVar("sm_tails_molotov", "1", "Enables Nade Tails on Molotovs (0/1).", _, true, 0.0, true, 1.0);
-	g_EnableIncTails		= CreateConVar("sm_tails_incendiary", "1", "Enables Nade Tails on Incendiary Grenades (0/1).", _, true, 0.0, true, 1.0);
+	// Grenades to put trails on
+	g_EnableHETrails = CreateConVar("sm_grenade_trails_hegrenade", "1", "Enables Grenade Trails on HE Grenades (0/1).", _, true, 0.0, true, 1.0);
+	g_EnableFlashTrails = CreateConVar("sm_grenade_trails_flashbang", "1", "Enables Grenade Trails on Flashbangs (0/1).", _, true, 0.0, true, 1.0);
+	g_EnableSmokeTrails = CreateConVar("sm_grenade_trails_smoke", "1", "Enables Grenade Trails on Smoke Grenades (0/1).", _, true, 0.0, true, 1.0);
+	g_EnableDecoyTrails = CreateConVar("sm_grenade_trails_decoy", "1", "Enables Grenade Trails on Decoy Grenades (0/1).", _, true, 0.0, true, 1.0);
+	g_EnableMolotovTrails = CreateConVar("sm_grenade_trails_molotov", "1", "Enables Grenade Trails on Molotovs (0/1).", _, true, 0.0, true, 1.0);
+	g_EnableIncTrails = CreateConVar("sm_grenade_trails_incendiary", "1", "Enables Grenade Trails on Incendiary Grenades (0/1).", _, true, 0.0, true, 1.0);
 	
 	//TE_SetupBeamFollow CVARs -- Colors
-	g_HEColor				= CreateConVar("sm_tails_hecolor", "random", "Tail color on HE Grenades. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
-	g_FlashColor			= CreateConVar("sm_tails_flashcolor", "random", "Tail color on Flashbangs. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
-	g_SmokeColor			= CreateConVar("sm_tails_smokecolor", "random", "Tail color on Smoke Grenades. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
-	g_DecoyColor			= CreateConVar("sm_tails_decoycolor", "random", "Tail color on Decoy Grenades. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20,147 225\"");
-	g_MolotovColor		= CreateConVar("sm_tails_molotovcolor", "random", "Tail color on Molotovs. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
-	g_IncColor				= CreateConVar("sm_tails_inccolor", "random", "Tail color on Incendiary Grenades. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
+	g_HEColor = CreateConVar("sm_grenade_trails_hecolor", "random", "Trail color on HE Grenades. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
+	g_FlashColor = CreateConVar("sm_grenade_trails_flashcolor", "random", "Trail color on Flashbangs. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
+	g_SmokeColor = CreateConVar("sm_grenade_trails_smokecolor", "random", "Trail color on Smoke Grenades. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
+	g_DecoyColor = CreateConVar("sm_grenade_trails_decoycolor", "random", "Trail color on Decoy Grenades. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20,147 225\"");
+	g_MolotovColor = CreateConVar("sm_grenade_trails_molotovcolor", "random", "Trail color on Molotovs. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
+	g_IncColor = CreateConVar("sm_grenade_trails_inccolor", "random", "Trail color on Incendiary Grenades. (use named colors like \"Aqua\" or \"Black\" or use RGBA like \"255 20 147 225\"");
 	
 	//size and time
-	g_TailTime 			= CreateConVar("sm_tails_tailtime", "20.0", "Time the tail stays visible.", _, true, 0.0, true, 25.0);
-	g_TailFadeTime		= CreateConVar("sm_tails_tailfadetime", "1", "Time for tail to fade over.", _);
-	g_TailWidth			= CreateConVar("sm_tails_tailwidth", "1.0", "Width of the tail.", _);
+	g_TrailTime = CreateConVar("sm_grenade_trails_Trailtime", "20.0", "Time the trail stays visible.", _, true, 0.0, true, 25.0);
+	g_TrailFadeTime = CreateConVar("sm_grenade_trails_Trailfadetime", "1", "Time for trail to fade over.", _);
+	g_TrailWidth = CreateConVar("sm_grenade_trails_Trailwidth", "1.0", "Width of the trail.", _);
 	
 	AutoExecConfig(true);
 }
 
 public void OnClientPutInServer(int client)
 {
-	Tails[client] = false;
+	Trails[client] = false;
 }
 
-public Action Cmd_Tails(int client, int args)
+public Action Cmd_Trails(int client, int args)
 {
 	if(!GetConVarBool(g_Enabled))
-		ReplyToCommand(client, "Nade Tails is disabled");
+	{
+		ReplyToCommand(client, "Grenade Trails is disabled");
+	}
 	else if(GetConVarBool(g_AllowPlayers))
 	{
-		Tails[client] = !Tails[client];
-		ReplyToCommand(client, "Nade Tails %s", Tails[client] ? "Enabled" : "Disabled");
+		Trails[client] = !Trails[client];
+		ReplyToCommand(client, "Grenade Trails %s", Trails[client] ? "Enabled" : "Disabled");
 	}
 	else 
-		ReplyToCommand(client, "Nade Tails is not authorized for players to use");
+	{
+		ReplyToCommand(client, "Grenade Trails is not authorized for players to use");
+	}
 	
 	return Plugin_Handled;
 }
@@ -255,16 +253,24 @@ Action GetSetColor(Handle hColorCvar)
 		TempColorArray[1] = StringToInt(sTemp[1]);
 		TempColorArray[2] = StringToInt(sTemp[2]);
 		PrintToChatAll("%s", sTemp[3]);
+		
 		if(StrEqual(sTemp[3], ""))
+		{
 			TempColorArray[3] = 225;
+		}
 		else
+		{
 			TempColorArray[3] = StringToInt(sTemp[3]);
+		}
 	}
 }
 
 public void OnEntityCreated(int entity, const char []classname)
 {
-	if(GetConVarBool(g_Enabled) && IsValidEntity(entity)) SDKHook(entity, SDKHook_SpawnPost, OnEntitySpawned); //don't draw tails if we disable the plugin while people have tails enabled
+	if(GetConVarBool(g_Enabled) && IsValidEntity(entity))
+	{
+		SDKHook(entity, SDKHook_SpawnPost, OnEntitySpawned); // Don't show trails if we disable the plugin while people have trails enabled
+	}
 }
 
 public void OnEntitySpawned(int entity)
@@ -273,26 +279,39 @@ public void OnEntitySpawned(int entity)
 	GetEdictClassname(entity, class_name, 32);
 	int owner = GetEntPropEnt(entity, Prop_Data, "m_hOwnerEntity");
 	
-	if(StrContains(class_name, "projectile") != -1 && IsValidEntity(entity) && (((GetConVarBool(g_AllowPlayers) || isOwner(owner)) && Tails[owner]) || GetConVarBool(g_DefaultOn)))
+	if(StrContains(class_name, "projectile") != -1 && IsValidEntity(entity) && (((GetConVarBool(g_AllowPlayers) || isOwner(owner)) && Trails[owner]) || GetConVarBool(g_DefaultOn)))
 	{
-		if(StrContains(class_name, "hegrenade") != -1 && GetConVarBool(g_EnableHETails))
+		if(StrContains(class_name, "hegrenade") != -1 && GetConVarBool(g_EnableHETrails))
+		{
 			GetSetColor(g_HEColor);
-		else if(StrContains(class_name, "flashbang") != -1 && GetConVarBool(g_EnableFlashTails))
+		}
+		else if(StrContains(class_name, "flashbang") != -1 && GetConVarBool(g_EnableFlashTrails))
+		{
 			GetSetColor(g_FlashColor);
-		else if(StrContains(class_name, "smoke") != -1 && GetConVarBool(g_EnableSmokeTails))
+		}
+		else if(StrContains(class_name, "smoke") != -1 && GetConVarBool(g_EnableSmokeTrails))
+		{
 			GetSetColor(g_SmokeColor);
-		else if(StrContains(class_name, "decoy") != -1 && GetConVarBool(g_EnableDecoyTails))
+		}
+		else if(StrContains(class_name, "decoy") != -1 && GetConVarBool(g_EnableDecoyTrails))
+		{
 			GetSetColor(g_DecoyColor);
-		else if(StrContains(class_name, "molotov") != -1 && GetConVarBool(g_EnableMolotovTails))
+		}
+		else if(StrContains(class_name, "molotov") != -1 && GetConVarBool(g_EnableMolotovTrails))
+		{
 			GetSetColor(g_MolotovColor);
-		else if(StrContains(class_name, "incgrenade") != -1 && GetConVarBool(g_EnableIncTails))
+		}
+		else if(StrContains(class_name, "incgrenade") != -1 && GetConVarBool(g_EnableIncTrails))
+		{
 			GetSetColor(g_IncColor);
-		TE_SetupBeamFollow(entity, g_iBeamSprite, 0, GetConVarFloat(g_TailTime), GetConVarFloat(g_TailWidth), GetConVarFloat(g_TailWidth), GetConVarInt(g_TailFadeTime), TempColorArray);
+		}
+		
+		TE_SetupBeamFollow(entity, g_iBeamSprite, 0, GetConVarFloat(g_TrailTime), GetConVarFloat(g_TrailWidth), GetConVarFloat(g_TrailWidth), GetConVarInt(g_TrailFadeTime), TempColorArray);
 		TE_SendToAll();
 	}
 }
 
 public bool isOwner(int client)
 {
-	return CheckCommandAccess(client, "tails_menu", ADMFLAG_ROOT);
+	return CheckCommandAccess(client, "Trails_menu", ADMFLAG_ROOT);
 }
